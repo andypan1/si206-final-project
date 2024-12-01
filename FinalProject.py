@@ -1,82 +1,61 @@
 import http.client
 import json
+import time
 
 # API headers
-headers = {
-    'x-rapidapi-host': "v3.football.api-sports.io",
-    'x-rapidapi-key': "d39362e28da0ae4d374f3edf0a31e5dd"
-}
-
-# Request 1: Venue details
-conn1 = http.client.HTTPSConnection("v3.football.api-sports.io")
-conn1.request("GET", "/standings?league=39&season=2020", headers=headers)
-res1 = conn1.getresponse()
-data1 = res1.read()
-
-# Save response 1 to JSON file
-with open('standings.json', 'w') as file1:
-    json.dump(json.loads(data1.decode("utf-8")), file1, indent=4)
-
-# Load JSON data from standings.json file
-with open('standings.json', 'r') as file:
-    standings_data = json.load(file)
-
-# Extract team IDs from standings
-team_ids = []
-standings = standings_data['response'][0]['league']['standings'][0]
-for team in standings:
-    team_id = team['team']['id']
-    team_ids.append(team_id)
-
-# Prepare to fetch team statistics
-team_statistics = {}
 api_headers = {
     'x-rapidapi-host': "v3.football.api-sports.io",
     'x-rapidapi-key': "d39362e28da0ae4d374f3edf0a31e5dd"
 }
 
-# Loop through team IDs and fetch data from the team_statistics API
-for team_id in team_ids:
-    conn = http.client.HTTPSConnection("v3.football.api-sports.io")
-    endpoint = f"/teams/statistics?season=2020&team={team_id}&league=39"  # Adjust season and league as needed
-    conn.request("GET", endpoint, headers=api_headers)
+# Leagues and seasons to process
+leagues = [39, 140]  # Premier League and La Liga, for example
+seasons = [2020, 2021, 2022]
 
-    # Get response and decode it
-    response = conn.getresponse()
-    data = response.read().decode("utf-8")
+# Initialize storage for standings and statistics
+all_standings = {}
+team_statistics = {}
 
-    # Parse JSON and add it to team_statistics
-    team_statistics[team_id] = json.loads(data)
+# Fetch standings for each league and season
+for league_id in leagues:
+    for season in seasons:
+        # Request standings for the league and season
+        conn = http.client.HTTPSConnection("v3.football.api-sports.io")
+        endpoint = f"/standings?league={league_id}&season={season}"
+        conn.request("GET", endpoint, headers=api_headers)
+        response = conn.getresponse()
+        data = response.read().decode("utf-8")
 
-# Save the team statistics to team_statistics.json
-with open('team_statistics.json', 'w') as outfile:
-    json.dump(team_statistics, outfile, indent=4)
+        # Parse and store standings
+        standings = json.loads(data)
+        all_standings[f"{league_id}_{season}"] = standings
 
-print(f"Team statistics data saved to team_statistics.json for {len(team_ids)} teams.")
+        # Extract team IDs from standings
+        if standings.get("response"):
+            teams = standings["response"][0]["league"]["standings"][0]
+            team_ids = [team["team"]["id"] for team in teams]
 
+            # Fetch statistics for each team
+            for team_id in team_ids:
+                time.sleep(7)
+                conn = http.client.HTTPSConnection("v3.football.api-sports.io")
+                stats_endpoint = f"/teams/statistics?season={season}&team={team_id}&league={league_id}"
+                conn.request("GET", stats_endpoint, headers=api_headers)
+                stats_response = conn.getresponse()
+                stats_data = stats_response.read().decode("utf-8")
 
-# Request 2: Team statistics
-# conn2 = http.client.HTTPSConnection("v3.football.api-sports.io")
-# conn2.request("GET", "/teams/statistics?season=2020&team=33&league=39", headers=headers)
-# res2 = conn2.getresponse()
-# data2 = res2.read()
+                # Parse and store team statistics
+                if team_id not in team_statistics:
+                    team_statistics[team_id] = {}
+                team_statistics[team_id][f"{league_id}_{season}"] = json.loads(stats_data)
 
-# Save response 2 to JSON file
-# with open('team_statistics.json', 'w') as file2:
-#     json.dump(json.loads(data2.decode("utf-8")), file2, indent=4)
+# Save standings to standings.json
+with open('standings.json', 'w') as standings_file:
+    json.dump(all_standings, standings_file, indent=4)
 
-# Load JSON data from standings.json file
-# with open('standings.json', 'r') as file:
-#     data = json.load(file)
+# Save team statistics to team_statistics.json
+with open('team_statistics.json', 'w') as statistics_file:
+    json.dump(team_statistics, statistics_file, indent=4)
 
-# Extract league information
-# league_id = data['response'][0]['league']['id']
-
-# Extract standings
-# standings = data['response'][0]['league']['standings'][0]
-
-# Iterate through each team's standings and extract the required data
-# for team in standings:
-#     team_id = team['team']['id']
-#     points_for = team['all']['goals']['for']
-#     points_against = team['all']['goals']['against']
+print(f"Standings data saved to standings.json for leagues {leagues} and seasons {seasons}.")
+print(f"Team statistics data saved to team_statistics.json.")
