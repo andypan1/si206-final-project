@@ -1,6 +1,34 @@
 import http.client
 import json
 import time
+import sqlite3
+
+
+con = sqlite3.connect('./db/final.db')
+cur = con.cursor()
+
+cur.execute(
+    '''
+    CREATE TABLE IF NOT EXISTS Teams(
+        team_id INTEGER PRIMARY KEY,
+        team_name TEXT UNIQUE,
+        home TEXT
+    )
+    '''
+)
+cur.execute(
+    '''
+    CREATE TABLE IF NOT EXISTS TeamStatistics (
+        tid INTEGER,
+        year INTEGER,
+        wins INTEGER,
+        goals_scored INTEGER,
+        points INTEGER,
+        FOREIGN KEY (tid) REFERENCES Teams (team_id),
+        PRIMARY KEY (tid, year)
+    )
+    '''
+)
 
 conn = http.client.HTTPSConnection("api-football-v1.p.rapidapi.com")
 # API headers
@@ -16,41 +44,49 @@ seasons = [2020, 2021, 2022]
 
 # Fetch standings for each league and season
 for league_id in leagues:
+    # fill Teams Table
     for season in seasons:
-        all_standings = {}
+        endpoint = f"/v3/teams?league={league_id}&season={season}"
+        conn.request("GET", endpoint, headers=api_headers)
+        response = conn.getresponse() 
+        data = response.read().decode("utf-8")
+        response_data = json.loads(data)
+        teams = response_data['response']
+        for team in teams:
+            team_name = team['team']['name']
+            city = team['venue']['city']
+            team_id = team['team']['id']
+            cur.execute(
+                '''
+                INSERT OR IGNORE INTO Teams(team_id, team_name, home)
+                VALUES(?, ?, ?)
+                ''',
+                (team_id, team_name, city)
+            )
+        time.sleep(2)
+    
+    # fill TeamStatistics Table
+    for season in seasons:
         endpoint = f"/v3/standings?league={league_id}&season={season}"
         conn.request("GET", endpoint, headers=api_headers)
         response = conn.getresponse()
         data = response.read().decode("utf-8")
+        response_data = json.loads(data)
+        standings = response_data['response'][0]['league']['standings'][0]
+        for team in standings:
+            team_id = team['team']['id']
+            points = team['points']
+            wins = team['all']['win']
+            goals = team['all']['goals']['for']
 
-        # Parse and store standings
-        standings = json.loads(data)
-        all_standings[f"{league_id}_{season}"] = standings
+            cur.execute(
+                '''
+                INSERT INTO TeamStatistics(tid, year, wins, goals_scored, points)
+                VALUES(?, ?, ?, ?, ?)
+                ''',
+                (team_id, season, wins, goals, points)
+            )
+        time.sleep(2)
 
-        # Extract team IDs from standings
-        if standings.get("response"):
-            teams = standings["response"][0]["league"]["standings"][0]
-            team_ids = [team["team"]["id"] for team in teams]
-            team_info = {}
-
-            for team_id in team_ids:
-                stats_endpoint = f"/v3/teams?id={team_id}"
-                conn.request("GET", stats_endpoint, headers=api_headers)
-                stats_response = conn.getresponse()
-                stats_data = stats_response.read().decode("utf-8")
-                time.sleep(2)
-
-                # Parse and store info
-                if team_id not in team_info:
-                    team_info[team_id] = {}
-                team_info[team_id][f"{league_id}_{season}"] = json.loads(stats_data)
-
-            with open(f"{league_id}_{season}_team_stats.json", 'w') as statistics_file:
-                json.dump(team_info, statistics_file, indent=4)
-
-        with open(f"{league_id}_{season}_standings.json", 'w') as standings_file:
-            json.dump(all_standings, standings_file, indent=4)
-
-
-    print(f"Standings data saved to {league_id}{season}_standings.json for leagues {leagues} and seasons {seasons}.")
-    print(f"Team statistics data saved to {league_id}{season}_team_stats.son")
+con.commit()
+con.close()

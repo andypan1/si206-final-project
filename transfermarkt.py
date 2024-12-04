@@ -3,7 +3,7 @@ import requests # type: ignore
 from bs4 import BeautifulSoup # type: ignore
 import time
 
-conn = sqlite3.connect('./db/transfers.db')
+conn = sqlite3.connect('./db/final.db')
 cur = conn.cursor()
 
 cur.execute(
@@ -19,12 +19,12 @@ cur.execute(
 def convert_euros_to_int(euros):
     if euros == "-":
         return 0
-    euros = euros.replace("€", "").replace(",", "").strip()  # Remove euro symbol and commas
-    if "m" in euros:  # Convert from million
+    euros = euros.replace("€", "").replace(",", "").strip()
+    if "m" in euros:
         return int(float(euros.replace("m", "").strip()) * 1_000_000)
     if "k" in euros:
         return int(float(euros.replace("k", "").strip()) * 1_000)
-    return int(euros)  # Assume it's already in integer format
+    return int(euros)
 
 years = [2020, 2021, 2022]
 # 2020-2022 premier league transfers

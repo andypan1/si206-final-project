@@ -46,7 +46,7 @@ lat_log = [
     (52.59, -2.11)            # Wolverhampton
 ] # (Source: https://www.latlong.net/category/cities-235-15.html)
 
-conn = sqlite3.connect('./db/weather_data.db')
+conn = sqlite3.connect('./db/final.db')
 cursor = conn.cursor()
 
 cursor.execute(
