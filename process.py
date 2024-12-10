@@ -7,6 +7,10 @@ conn = sqlite3.connect('./db/final.db')
 cur = conn.cursor()
 
 def process_db(years, teams):
+    '''
+    Process the data from the database to find how much each team spends
+    and the amount of goals/points score per year.
+    '''
     with open('processed_data.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Year', 'Team', 'Points/Expense', 'Goals/Expense'])
@@ -55,6 +59,9 @@ def process_db(years, teams):
     return performance_metrics
 
 def visual_one(data):
+    '''
+    Produces a line graph for points vs expenses.
+    '''
     fig = go.Figure()
 
     for team, data in data.items():
@@ -79,6 +86,9 @@ def visual_one(data):
     fig.show()
 
 def visual_two(data):
+    '''
+    Produces a bar graph for goals vs expenses.
+    '''
     fig = go.Figure()
 
     for team, data in data.items():
