@@ -159,7 +159,7 @@ plt.plot(
 
 # Add labels, title, and legend
 plt.title("Correlation Between Average Home Goals and Temperature (All Teams)")
-plt.xlabel("Temperature (°C)")
+plt.xlabel("Temperature (°F)")
 plt.ylabel("Average Home Goals")
 plt.legend(title="Teams")
 plt.grid(True)
