@@ -14,7 +14,7 @@ team_to_city = {
     'West Ham': 'London'
 }
 
-# Define a function to calculate monthly goals
+# Function to calculate monthly goals
 def calculate_monthly_goals(data):
     data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
     data['Month'] = data['Date'].dt.month
