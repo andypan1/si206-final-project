@@ -28,25 +28,21 @@ def scrape_team_table(url):
     df = pd.DataFrame(rows, columns=headers)
     return df
 
-# Define a function to calculate monthly goals
-def calculate_monthly_goals(data):
-    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-    data['Month'] = data['Date'].dt.month
-    data['Year'] = data['Date'].dt.year
-    data['GF'] = pd.to_numeric(data['GF'], errors='coerce')
-    monthly_goals = data.groupby(['Year', 'Month'])['GF'].sum().reset_index()
-    return monthly_goals
+# Define a function to store goals data in the database
+def store_goals_in_db(data, team_name, conn):
+    # Select relevant columns (modify as per the table structure in fbref)
+    data = data[['Date', 'GF', 'Venue']].copy()
+    data['Team'] = team_name
 
-# Define a function to calculate average home goals
-def calculate_avg_home_goals(data):
+    # Convert to datetime and numeric where applicable
     data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-    data['Month'] = data['Date'].dt.month
-    data['Year'] = data['Date'].dt.year
-    home_games = data[data['Venue'] == 'Home'].copy()
-    home_games.loc[:, 'GF'] = pd.to_numeric(home_games['GF'], errors='coerce')
-    avg_home_goals = home_games.groupby(['Year', 'Month'])['GF'].mean().reset_index()
-    avg_home_goals.rename(columns={'GF': 'Avg Home Goals'}, inplace=True)
-    return avg_home_goals
+    data['GF'] = pd.to_numeric(data['GF'], errors='coerce')
+
+    # Drop rows with invalid dates or goals
+    data = data.dropna(subset=['Date', 'GF'])
+
+    # Insert data into the database
+    data.to_sql('team_goals', conn, if_exists='append', index=False)
 
 # URLs for the teams
 team_urls = {
@@ -56,111 +52,30 @@ team_urls = {
     'West Ham': "https://fbref.com/en/squads/7c21e445/2022-2023/matchlogs/all_comps/schedule/West-Ham-United-Scores-and-Fixtures-All-Competitions"
 }
 
-# Map teams to their home cities
-team_to_city = {
-    'Manchester': 'Manchester',
-    'Liverpool': 'Liverpool',
-    'Arsenal': 'London',
-    'West Ham': 'London'
-}
-
-# Dictionary to store results
-team_data = {}
-
-# Scrape data and calculate goals
-for team, url in team_urls.items():
-    print(f"Scraping data for {team}...")
-    team_table = scrape_team_table(url)
-    monthly_goals = calculate_monthly_goals(team_table)
-    avg_home_goals = calculate_avg_home_goals(team_table)
-    team_data[team] = {'monthly_goals': monthly_goals, 'avg_home_goals': avg_home_goals}
-    time.sleep(6)  # Wait to avoid exceeding request limits
-
 # Connect to the database
 conn = sqlite3.connect('./db/final.db')
 
-# Prepare the SQL query to match cities
-cities = "', '".join(team_to_city.values())
-query = f"""
-SELECT location, month, temp
-FROM monthly_avg_temp
-WHERE location IN ('{cities}')
-ORDER BY location, month
+# Create the `team_goals` table if it doesn't exist
+create_table_query = """
+CREATE TABLE IF NOT EXISTS team_goals (
+    Date DATE,
+    GF INTEGER,
+    Venue TEXT,
+    Team TEXT
+);
 """
-
-# Execute the query and fetch the results
 cursor = conn.cursor()
-cursor.execute(query)
-temp_data = cursor.fetchall()
+cursor.execute(create_table_query)
+conn.commit()
+
+# Scrape data and store goals in the database
+for team, url in team_urls.items():
+    print(f"Scraping data for {team}...")
+    team_table = scrape_team_table(url)
+    store_goals_in_db(team_table, team, conn)
+    time.sleep(6)  # Wait to avoid exceeding request limits
+
+# Close the database connection
 conn.close()
 
-# Convert temperatures to a DataFrame
-temp_df = pd.DataFrame(temp_data, columns=['Location', 'Month', 'Temperature'])
-
-# Print results for each team
-for team, data in team_data.items():
-    print(f"\nTeam: {team}")
-    print("Monthly Goals:")
-    print(data['monthly_goals'])
-    print("\nAverage Home Goals:")
-    print(data['avg_home_goals'])
-
-    # Fetch temperature data for the team's city
-    team_city = team_to_city[team]
-    team_temps = temp_df[temp_df['Location'] == team_city]
-    print("\nMonthly Temperatures:")
-    print(team_temps)
-
-
-# Aggregate data for all teams
-all_temps = []
-all_goals = []
-
-for team, data in team_data.items():
-    # Merge temperature data with team data
-    monthly_goals = data['avg_home_goals']
-    city_temps = temp_df[temp_df['Location'] == team_to_city[team]]  # Use existing mapping
-    merged_data = monthly_goals.merge(city_temps, on='Month', how='inner')
-    
-    # Collect data for regression
-    all_temps.extend(merged_data['Temperature'])
-    all_goals.extend(merged_data['Avg Home Goals'])
-
-# Convert to numpy arrays for regression
-all_temps = np.array(all_temps)
-all_goals = np.array(all_goals)
-
-# Create scatter plot
-plt.figure(figsize=(12, 8))
-for team, data in team_data.items():
-    # Merge temperature data with team data
-    monthly_goals = data['avg_home_goals']
-    city_temps = temp_df[temp_df['Location'] == team_to_city[team]]  # Use existing mapping
-    merged_data = monthly_goals.merge(city_temps, on='Month', how='inner')
-
-    # Scatter plot for each team
-    plt.scatter(
-        merged_data['Temperature'],
-        merged_data['Avg Home Goals'],
-        label=team,
-        alpha=0.8
-    )
-
-# Add a regression line for all teams
-slope, intercept = np.polyfit(all_temps, all_goals, 1)  # Linear regression
-plt.plot(
-    all_temps,
-    slope * all_temps + intercept,
-    color='black',
-    label="Overall Trend",
-    linestyle="-",
-    linewidth=1.5
-)
-
-# Add labels, title, and legend
-plt.title("Correlation Between Average Home Goals and Temperature (All Teams)")
-plt.xlabel("Temperature (°F)")
-plt.ylabel("Average Home Goals")
-plt.legend(title="Teams")
-plt.grid(True)
-plt.show()
+print("Goals data successfully stored in the database.")
