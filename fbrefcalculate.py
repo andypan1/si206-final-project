@@ -1,7 +1,7 @@
-import pandas as pd
-import sqlite3
-import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd # type: ignore
+import sqlite3 # type: ignore
+import matplotlib.pyplot as plt # type: ignore
+import numpy as np # type: ignore
 
 # Connect to the database
 conn = sqlite3.connect('./db/final.db')

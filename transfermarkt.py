@@ -133,11 +133,11 @@ def main():
         )
         '''
     )
-    conn.commit()
-    conn.close()
     years = [2020, 2021, 2022]
     process_prem(years, cur)
     process_laliga(years, cur)
+    conn.commit()
+    conn.close()
 
 if __name__ == '__main__':
     main()

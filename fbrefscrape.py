@@ -1,10 +1,10 @@
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
+import requests # type: ignore
+from bs4 import BeautifulSoup # type: ignore
+import pandas as pd # type: ignore
 import sqlite3
 import time
-import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib.pyplot as plt # type: ignore
+import numpy as np # type: ignore
 
 # Define a function to scrape team tables
 def scrape_team_table(url):
