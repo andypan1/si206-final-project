@@ -1,0 +1,41 @@
+Team,City,Month,Temperature,Average Goals
+Manchester,Manchester,1.0,45.6661,2.0
+Manchester,Manchester,2.0,49.2458,2.142857142857143
+Manchester,Manchester,3.0,49.2255,4.0
+Manchester,Manchester,4.0,54.6938,3.0
+Manchester,Manchester,5.0,63.5616,1.875
+Manchester,Manchester,8.0,73.8698,3.8
+Manchester,Manchester,9.0,64.5239,2.5
+Manchester,Manchester,10.0,59.3653,2.375
+Manchester,Manchester,11.0,52.2745,2.0
+Manchester,Manchester,12.0,41.6684,2.3333333333333335
+Liverpool,Liverpool,1.0,46.589,0.8333333333333334
+Liverpool,Liverpool,2.0,49.3858,1.2
+Liverpool,Liverpool,3.0,48.8651,2.25
+Liverpool,Liverpool,4.0,54.2651,2.5714285714285716
+Liverpool,Liverpool,5.0,61.4651,2.0
+Liverpool,Liverpool,8.0,72.103,3.0
+Liverpool,Liverpool,9.0,64.5356,1.0
+Liverpool,Liverpool,10.0,60.3826,2.2222222222222223
+Liverpool,Liverpool,11.0,52.9694,2.3333333333333335
+Liverpool,Liverpool,12.0,43.0122,2.3333333333333335
+Arsenal,London,1.0,47.1617,1.6
+Arsenal,London,2.0,50.584,1.4
+Arsenal,London,3.0,51.1798,3.2
+Arsenal,London,4.0,56.7074,2.4
+Arsenal,London,5.0,63.9656,2.0
+Arsenal,London,8.0,78.9916,2.6
+Arsenal,London,9.0,67.3661,2.0
+Arsenal,London,10.0,64.2403,2.0
+Arsenal,London,11.0,55.0469,1.25
+Arsenal,London,12.0,45.263,3.5
+West Ham,London,1.0,47.1617,1.4
+West Ham,London,2.0,50.584,1.5
+West Ham,London,3.0,51.1798,1.6
+West Ham,London,4.0,56.7074,2.0
+West Ham,London,5.0,63.9656,1.1428571428571428
+West Ham,London,8.0,78.9916,1.1428571428571428
+West Ham,London,9.0,67.3661,1.75
+West Ham,London,10.0,64.2403,1.3333333333333333
+West Ham,London,11.0,55.0469,1.3333333333333333
+West Ham,London,12.0,45.263,0.5

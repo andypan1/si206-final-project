@@ -52,6 +52,9 @@ conn.close()
 all_temps = []
 all_goals = []
 
+# Prepare data for CSV output
+csv_data = []
+
 # Collect data for plotting and regression
 for team, city in team_to_city.items():
     if team in team_goals and city in team_temps:
@@ -67,6 +70,7 @@ for team, city in team_to_city.items():
                 temp = temp_row.iloc[0]['temp']
                 all_temps.append(temp)
                 all_goals.append(avg_goals)
+                csv_data.append({'Team': team, 'City': city, 'Month': month, 'Temperature': temp, 'Average Goals': avg_goals})
 
 # Convert to numpy arrays for regression
 all_temps = np.array(all_temps)
@@ -110,3 +114,9 @@ plt.ylabel("Average Home Goals")
 plt.legend(title="Teams")
 plt.grid(True)
 plt.show()
+
+# Write the calculations into a CSV file
+csv_df = pd.DataFrame(csv_data)
+csv_df.to_csv('team_goals_vs_temperature.csv', index=False)
+
+print("Data written to 'team_goals_vs_temperature.csv'")
