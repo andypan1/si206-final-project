@@ -29,19 +29,6 @@ def clean_team_name(team_name):
     
     return cleaned_name.strip()
 
-def convert_euros_to_int(euros):
-    '''
-    Converts Euros into integers. (i.e. 4.6k -> 4600)
-    '''
-    if euros == "-":
-        return 0
-    euros = euros.replace("€", "").replace(",", "").strip()
-    if "m" in euros:
-        return int(float(euros.replace("m", "").strip()) * 1_000_000)
-    if "k" in euros:
-        return int(float(euros.replace("k", "").strip()) * 1_000)
-    return int(euros)
-
 def process_prem(year, cur):
     '''
     Process the transfer spending of each team in the Premier League between 2020-2022.
@@ -61,26 +48,14 @@ def process_prem(year, cur):
                 team_name_cell = row.find("td", class_="hauptlink no-border-links")
                 team_name = team_name_cell.get_text(strip=True)
                 team_name = clean_team_name(team_name)
-                euros_cell = row.find("td", class_="rechts hauptlink redtext")
-                euros_string = euros_cell.get_text(strip=True) if euros_cell else None
-                euros_value = convert_euros_to_int(euros_string) if euros_string else 0
-                if team_name and euros_value is not None:
-                    teams_data.append({"team": team_name, "euros": euros_value})
+                teams_data.append({"team": team_name})
         for team in teams_data:
             cur.execute(
                 '''
-                SELECT id FROM transfer_fee_teams
-                WHERE team = ?
+                INSERT OR IGNORE INTO transfer_fee_teams(team)
+                VALUES (?)
                 ''',
                 (team['team'], )
-            )
-            tid = cur.fetchone()[0] 
-            cur.execute(
-                '''
-                INSERT OR IGNORE INTO transfer_fee(tid, year, expenses)
-                VALUES (?, ?, ?)
-                ''',
-                (tid, year, team['euros'], )
             )
     else:
         print(f"Failed to retrieve the page. Status code: {resp.status_code}")
@@ -104,26 +79,14 @@ def process_laliga(year, cur):
                 team_name_cell = row.find("td", class_="hauptlink no-border-links")
                 team_name = team_name_cell.get_text(strip=True)
                 team_name = clean_team_name(team_name)
-                euros_cell = row.find("td", class_="rechts hauptlink redtext")
-                euros_string = euros_cell.get_text(strip=True)
-                euros_value = convert_euros_to_int(euros_string) if euros_string else 0
-                if team_name and euros_value is not None:
-                    teams_data.append({"team": team_name, "euros": euros_value})
+                teams_data.append({"team": team_name})
         for team in teams_data:
             cur.execute(
                 '''
-                SELECT id FROM transfer_fee_teams
-                WHERE team = ?
+                INSERT OR IGNORE INTO transfer_fee_teams(team)
+                VALUES (?)
                 ''',
                 (team['team'], )
-            )
-            tid = cur.fetchone()[0] 
-            cur.execute(
-                '''
-                INSERT OR IGNORE INTO transfer_fee(tid, year, expenses)
-                VALUES (?, ?, ?)
-                ''',
-                (tid, year, team['euros'], )
             )
     else:
         print(f"Failed to retrieve the page. Status code: {resp.status_code}")
@@ -131,18 +94,16 @@ def process_laliga(year, cur):
 def main():
     conn = sqlite3.connect('./db/final_new.db')
     cur = conn.cursor()
-    
+
     cur.execute(
         '''
-        CREATE TABLE IF NOT EXISTS transfer_fee(
-            tid INTEGER,
-            year INTEGER,
-            expenses INTEGER,
-            FOREIGN KEY (tid) REFERENCES transfer_fee_teams (id),
-            PRIMARY KEY (tid, year)
+        CREATE TABLE IF NOT EXISTS transfer_fee_teams(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            team TEXT UNIQUE
         )
         '''
     )
+
     years = int(input("Enter a year from 2020-2022: "))
     if years not in [2020, 2021, 2022]:
         print("Please enter a valid year.")

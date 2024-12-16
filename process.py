@@ -3,7 +3,7 @@ import csv
 import plotly.graph_objects as go #type: ignore
 import csv
 
-conn = sqlite3.connect('./db/final.db')
+conn = sqlite3.connect('./db/final_new.db')
 cur = conn.cursor()
 
 def process_db(years, teams):
@@ -20,15 +20,15 @@ def process_db(years, teams):
                     '''
                     SELECT f.expenses, s.wins, s.points, s.goals_scored
                     FROM transfer_fee f
-                    JOIN Teams t ON t.team_name = f.team
+                    JOIN transfer_fee_teams tt ON f.tid = tt.id
+                    JOIN Teams t ON tt.team = t.team_name
                     JOIN TeamStatistics s ON t.team_id = s.tid
-                    WHERE f.team = ? AND f.year = ? AND s.year = ?
+                    WHERE tt.team = ? AND f.year = ? AND s.year = ?;
                     ''',
                     (team, year, year)
                 ).fetchone()
                 if result:
                     expense = result[0]
-                    wins = result[1]
                     points = result[2]
                     goals = result[3]
 
