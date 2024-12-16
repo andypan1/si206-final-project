@@ -1,12 +1,10 @@
-import requests # type: ignore
-from bs4 import BeautifulSoup # type: ignore
-import pandas as pd # type: ignore
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
 import sqlite3
 import time
-import matplotlib.pyplot as plt # type: ignore
-import numpy as np # type: ignore
 
-# Define a function to scrape team tables
+# Function to scrape team tables
 def scrape_team_table(url):
     response = requests.get(url)
     response.raise_for_status()
@@ -26,13 +24,28 @@ def scrape_team_table(url):
 
     # Convert to DataFrame
     df = pd.DataFrame(rows, columns=headers)
-    return df
+    
+    # Filter only home matches and relevant columns
+    df = df[df['Venue'] == 'Home']
+    return df[['Date', 'GF']]
 
-# Define a function to store goals data in the database
-def store_goals_in_db(data, team_name, conn):
-    # Select relevant columns (modify as per the table structure in fbref)
-    data = data[['Date', 'GF', 'Venue']].copy()
-    data['Team'] = team_name
+# Function to get team ID from the Teams table
+def get_team_id(team_name, conn):
+    cursor = conn.cursor()
+    
+    # Fetch the team_id by matching the team_name
+    cursor.execute("SELECT team_id FROM Teams WHERE team_name = ?", (team_name,))
+    result = cursor.fetchone()
+    
+    if result:
+        return result[0]  # Return existing team_id
+    else:
+        raise ValueError(f"Team '{team_name}' not found in the database.")
+
+# Function to store home goals data in the database
+def store_home_goals_in_db(data, team_id, conn):
+    # Add a team ID column
+    data['TeamId'] = team_id
 
     # Convert to datetime and numeric where applicable
     data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
@@ -46,36 +59,40 @@ def store_goals_in_db(data, team_name, conn):
 
 # URLs for the teams
 team_urls = {
-    'Manchester': "https://fbref.com/en/squads/b8fd03ef/2022-2023/matchlogs/all_comps/schedule/Manchester-City-Scores-and-Fixtures-All-Competitions",
-    'Liverpool': "https://fbref.com/en/squads/822bd0ba/2022-2023/matchlogs/all_comps/schedule/Liverpool-Scores-and-Fixtures-All-Competitions",
-    'Arsenal': "https://fbref.com/en/squads/18bb7c10/2022-2023/matchlogs/all_comps/schedule/Arsenal-Scores-and-Fixtures-All-Competitions",
-    'West Ham': "https://fbref.com/en/squads/7c21e445/2022-2023/matchlogs/all_comps/schedule/West-Ham-United-Scores-and-Fixtures-All-Competitions"
+    'Manchester United': "https://fbref.com/en/squads/19538871/2022-2023/matchlogs/c9/schedule/Manchester-Scores-and-Fixtures-Premier-League",
+    'Liverpool': "https://fbref.com/en/squads/822bd0ba/2022-2023/matchlogs/c9/schedule/Liverpool-Scores-and-Fixtures-Premier-League",
+    'Arsenal': "https://fbref.com/en/squads/18bb7c10/2022-2023/matchlogs/c9/schedule/Arsenal-Scores-and-Fixtures-Premier-League",
+    'West Ham': "https://fbref.com/en/squads/7c21e445/2022-2023/matchlogs/c9/schedule/West-Ham-Scores-and-Fixtures-Premier-League",
+    'Chelsea': "https://fbref.com/en/squads/cff3d9bb/2022-2023/matchlogs/c9/schedule/Chelsea-Scores-and-Fixtures-Premier-League",
+    'Manchester City': "https://fbref.com/en/squads/b8fd03ef/2022-2023/matchlogs/c9/schedule/Manchester-City-Scores-and-Fixtures-Premier-League"
 }
 
-# Connect to the database
-conn = sqlite3.connect('./db/final.db')
+# User input for team selection
+print("Available teams: Manchester United, Liverpool, Arsenal, West Ham, Chelsea, Manchester City")
+selected_team = input("Enter the team name: ").strip()
 
-# Create the `team_goals` table if it doesn't exist
-create_table_query = """
-CREATE TABLE IF NOT EXISTS team_goals (
-    Date DATE,
-    GF INTEGER,
-    Venue TEXT,
-    Team TEXT
-);
-"""
-cursor = conn.cursor()
-cursor.execute(create_table_query)
-conn.commit()
+if selected_team not in team_urls:
+    print("Invalid team name. Please choose from the available list.")
+else:
+    # Connect to the database
+    conn = sqlite3.connect('./db/final_new.db')
 
-# Scrape data and store goals in the database
-for team, url in team_urls.items():
-    print(f"Scraping data for {team}...")
+    # Retrieve the team ID
+    try:
+        team_id = get_team_id(selected_team, conn)
+    except ValueError as e:
+        print(e)
+        conn.close()
+        exit()
+
+    # Scrape data and store only home goals for the selected team
+    print(f"Scraping home goals data for {selected_team}...")
+    url = team_urls[selected_team]
     team_table = scrape_team_table(url)
-    store_goals_in_db(team_table, team, conn)
-    time.sleep(6)  # Wait to avoid exceeding request limits
+    store_home_goals_in_db(team_table, team_id, conn)
+    time.sleep(3)  # Wait to avoid exceeding request limits
 
-# Close the database connection
-conn.close()
+    # Close the database connection
+    conn.close()
 
-print("Goals data successfully stored in the database.")
+    print(f"Home goals data for {selected_team} successfully stored in the database.")
