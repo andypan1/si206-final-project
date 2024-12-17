@@ -13,7 +13,7 @@ def process_db(years, teams):
     '''
     with open('processed_data.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(['Year', 'Team', 'Points/Expense', 'Goals/Expense'])
+        writer.writerow(['Team', 'Year', 'Points/Expense', 'Goals/Expense'])
         for year in years:
             for team in teams:
                 result = cur.execute(
